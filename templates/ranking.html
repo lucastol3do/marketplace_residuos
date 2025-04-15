@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Ranking de Recicladoras</h2>
+    <p>As empresas abaixo são as que mais contribuíram para a economia circular, ordenadas por CO2 economizado.</p>
+    {% if ranking %}
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Posição</th>
+                    <th>Empresa</th>
+                    <th>CO2 Economizado (t CO2e)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i, r in enumerate(ranking, start=1) %}
+                    <tr>
+                        <td>{{ i }}</td>
+                        <td>{{ r['nome'] }}</td>
+                        <td>{{ r['total_co2'] | round(2) }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nenhuma empresa no ranking ainda. Continue reciclando para aparecer aqui!</p>
+    {% endif %}
+{% endblock %}

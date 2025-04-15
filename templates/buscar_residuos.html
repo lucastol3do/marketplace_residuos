@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Buscar Resíduos</h2>
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="tipo_residuo" class="form-label">Tipo de Resíduo</label>
+                <select class="form-select" id="tipo_residuo" name="tipo_residuo" required>
+                    <option value="">Selecione</option>
+                    {% for tipo in tipos_residuos %}
+                        <option value="{{ tipo }}">{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="raio" class="form-label">Raio (km)</label>
+                <input type="number" class="form-control" id="raio" name="raio" min="0">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="quantidade_min" class="form-label">Quantidade Mínima (t)</label>
+                <input type="number" class="form-control" id="quantidade_min" name="quantidade_min" min="0" step="0.01">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="data_inicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="data_inicio" name="data_inicio">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="data_fim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="data_fim" name="data_fim">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+
+    <!-- Mapa -->
+    <h3 class="mt-4">Localizações dos Resíduos</h3>
+    <div class="mb-3">
+        <button class="btn btn-secondary" onclick="toggleHeatmap()">Alternar Heatmap</button>
+        <form method="POST" action="{{ url_for('calcular_rota') }}" style="display: inline;">
+            <input type="hidden" name="residuos" id="residuos_selecionados">
+            <button type="submit" class="btn btn-info" onclick="selecionarResiduos()">Calcular Rota</button>
+        </form>
+    </div>
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+
+    <!-- Resultados -->
+    {% if residuos %}
+        <h3>Resultados da Busca</h3>
+        <table class="table mt-4">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" onclick="toggleSelecao(this)"></th>
+                    <th>ID</th>
+                    <th>Empresa</th>
+                    <th>Tipo</th>
+                    <th>Quantidade</th>
+                    <th>Unidade</th>
+                    <th>Localização</th>
+                    <th>Data</th>
+                    <th>Preço Estimado</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for residuo in residuos %}
+                    <tr>
+                        <td><input type="checkbox" class="residuo-checkbox" value="{{ residuo['id'] }}"></td>
+                        <td>{{ residuo['id'] }}</td>
+                        <td>{{ residuo['empresa_nome'] }}</td>
+                        <td>{{ residuo['tipo_residuo'] }}</td>
+                        <td>{{ residuo['quantidade'] }}</td>
+                        <td>{{ residuo['unidade'] }}</td>
+                        <td>{{ residuo['localizacao'] }}</td>
+                        <td>{{ residuo['data_registro'] }}</td>
+                        <td>R${{ {'Plástico': 2, 'Metal': 5, 'Papel': 1, 'Orgânico': 0.5}.get(residuo['tipo_residuo'], 1) * residuo['quantidade'] | round(2) }}/t</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#propostaModal" onclick="setProposta({{ residuo['id'] }})">Enviar Proposta</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="mt-4">Nenhum resíduo encontrado.</p>
+    {% endif %}
+
+    <!-- Modal de Proposta -->
+    <div class="modal fade" id="propostaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('propostas') }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Enviar Proposta</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="residuo_id" id="proposta_residuo_id">
+                        <div class="mb-3">
+                            <label for="quantidade_proposta" class="form-label">Quantidade (t)</label>
+                            <input type="number" class="form-control" id="quantidade_proposta" name="quantidade" required step="0.01">
+                        </div>
+                        <div class="mb-3">
+                            <label for="mensagem_proposta" class="form-label">Mensagem</label>
+                            <textarea class="form-control" id="mensagem_proposta" name="mensagem"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet e plugins -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script>
+        var map = L.map('map').setView([-23.5505, -46.6333], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var markers = L.markerClusterGroup();
+        var heatLayer = L.heatLayer([], { radius: 25 }).addTo(map);
+        var showHeatmap = false;
+        var residuos = {{ residuos_com_coordenadas | tojson }};
+        var bounds = [];
+
+        residuos.forEach(function(r) {
+            if (r.lat && r.lon) {
+                var marker = L.marker([r.lat, r.lon]);
+                marker.bindPopup(
+                    `<b>${r.tipo_residuo}</b><br>` +
+                    `Empresa: ${r.empresa_nome}<br>` +
+                    `Quantidade: ${r.quantidade} ${r.unidade}<br>` +
+                    `Localização: ${r.localizacao}<br>` +
+                    `Descrição: ${r.descricao || 'N/A'}<br>` +
+                    `Contato: ${r.contato || 'N/A'}`
+                );
+                markers.addLayer(marker);
+                heatLayer.addLatLng([r.lat, r.lon, r.quantidade / 100]);
+                bounds.push([r.lat, r.lon]);
+            }
+        });
+
+        map.addLayer(markers);
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        function toggleHeatmap() {
+            showHeatmap = !showHeatmap;
+            if (showHeatmap) {
+                map.removeLayer(markers);
+                map.addLayer(heatLayer);
+            } else {
+                map.removeLayer(heatLayer);
+                map.addLayer(markers);
+            }
+        }
+
+        function toggleSelecao(master) {
+            document.querySelectorAll('.residuo-checkbox').forEach(cb => cb.checked = master.checked);
+        }
+
+        function selecionarResiduos() {
+            var selecionados = Array.from(document.querySelectorAll('.residuo-checkbox:checked')).map(cb => cb.value);
+            document.getElementById('residuos_selecionados').value = selecionados.join(',');
+        }
+
+        function setProposta(id) {
+            document.getElementById('proposta_residuo_id').value = id;
+        }
+    </script>
+{% endblock %}

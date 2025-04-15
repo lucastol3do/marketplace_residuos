@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Bem-vindo, {{ session['empresa_nome'] }}!</h2>
+    <p>Monitore suas atividades e impacto ambiental.</p>
+
+    <!-- Notificações -->
+    <div id="notificacoes" class="card mb-3">
+        <div class="card-header">Notificações</div>
+        <div class="card-body">
+            {% if notificacoes %}
+                <ul class="list-group">
+                    {% for n in notificacoes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ n['mensagem'] }} <small>{{ n['data'] }}</small>
+                            <button class="btn btn-sm btn-secondary" onclick="marcarLida({{ n['id'] }})">Lida</button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Sem novas notificações.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Impacto Ambiental</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_co2 | round(2) }} t CO2e</h5>
+                    <p class="card-text">Economia total de CO2.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">Resíduos Disponíveis</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_residuos_count }} resíduos</h5>
+                    <p class="card-text">Total: {{ total_residuos_quantidade | round(2) }} t.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white {% if empresa_tipo == 'geradora' %}bg-primary{% else %}bg-warning{% endif %} mb-3">
+                <div class="card-header">Sua Atividade</div>
+                <div class="card-body">
+                    {% if empresa_tipo == 'geradora' %}
+                        <h5 class="card-title">{{ residuos_registrados_count }} resíduos</h5>
+                        <p class="card-text">Registrados: {{ residuos_registrados_quantidade | round(2) }} t</p>
+                    {% else %}
+                        <h5 class="card-title">{{ transacoes_realizadas_count }} transações</h5>
+                        <p class="card-text">Reciclado: {{ transacoes_realizadas_quantidade | round(2) }} t</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-dark mb-3">
+                <div class="card-header">Benchmarking</div>
+                <div class="card-body">
+                    {% if percentil %}
+                        <h5 class="card-title">Top {{ percentil | round(1) }}%</h5>
+                        <p class="card-text">Você está na posição {{ minha_posicao }} de {{ total_empresas }}.</p>
+                    {% else %}
+                        <p class="card-text">Realize transações para aparecer no ranking.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conquistas -->
+    <div class="card mt-4">
+        <div class="card-header">Suas Conquistas</div>
+        <div class="card-body">
+            {% if conquistas %}
+                <div class="row">
+                    {% for c in conquistas %}
+                        <div class="col-md-4">
+                            <div class="alert alert-success">
+                                <strong>{{ c['nome'] }}</strong>: {{ c['descricao'] }} <small>({{ c['data'] }})</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>Realize mais atividades para ganhar conquistas!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Distribuição de Resíduos</div>
+                <div class="card-body">
+                    <canvas id="residuosChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Tendência de Transações</div>
+                <div class="card-body">
+                    <canvas id="tendenciasChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sugestões -->
+    {% if sugestoes %}
+        <div class="card mt-4">
+            <div class="card-header">Sugestões de Resíduos</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Quantidade</th>
+                            <th>Unidade</th>
+                            <th>Empresa</th>
+                            <th>Localização</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sugestoes %}
+                            <tr>
+                                <td>{{ s['tipo_residuo'] }}</td>
+                                <td>{{ s['quantidade'] }}</td>
+                                <td>{{ s['unidade'] }}</td>
+                                <td>{{ s['empresa_nome'] }}</td>
+                                <td>{{ s['localizacao'] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Atividade recente -->
+    <div class="card mt-4">
+        <div class="card-header">Atividade Recente</div>
+        <div class="card-body">
+            {% if empresa_tipo == 'geradora' %}
+                {% if recentes %}
+                    <table class="table table-sm">
+                        <thead><tr><th>Tipo</th><th>Quantidade</th><th>Unidade</th><th>Localização</th><th>Data</th></tr></thead>
+                        <tbody>
+                            {% for r in recentes %}
+                                <tr>
+                                    <td>{{ r['tipo_residuo'] }}</td>
+                                    <td>{{ r['quantidade'] }}</td>
+                                    <td>{{ r['unidade'] }}</td>
+                                    <td>{{ r['localizacao'] }}</td>
+                                    <td>{{ r['data_registro'] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>Nenhum resíduo registrado.</p>
+                {% endif %}
+            {% else %}
+                {% if recentes %}
+                    <table class="table table-sm">
+                        <thead><tr><th>Tipo</th><th>Quantidade</th><th>CO2 Economizado</th><th>Data</th></tr></thead>
+                        <tbody>
+                            {% for t in recentes %}
+                                <tr>
+                                    <td>{{ t['tipo_residuo'] }}</td>
+                                    <td>{{ t['quantidade'] }}</td>
+                                    <td>{{ t['co2_economizado'] | round(2) }} t CO2e</td>
+                                    <td>{{ t['data_transacao'] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>Nenhuma transação registrada.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Gráfico de resíduos
+        new Chart(document.getElementById('residuosChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {{ tipos_residuos | tojson }},
+                datasets: [{
+                    label: 'Quantidade (toneladas)',
+                    data: {{ quantidades_residuos | tojson }},
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Toneladas' } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Gráfico de tendências
+        new Chart(document.getElementById('tendenciasChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: {{ meses | tojson }},
+                datasets: [{
+                    label: 'Quantidade (toneladas)',
+                    data: {{ quantidades_tend | tojson }},
+                    borderColor: '#36A2EB',
+                    fill: false
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Toneladas' } } }
+            }
+        });
+
+        // Marcar notificação como lida
+        function marcarLida(id) {
+            fetch('{{ url_for("marcar_notificacao_lida") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'notificacao_id=' + id
+            }).then(() => {
+                document.querySelector(`button[onclick="marcarLida(${id})"]`).parentElement.remove();
+            });
+        }
+
+        // Polling de notificações
+        setInterval(() => {
+            fetch('{{ url_for("index") }}').then(response => response.text()).then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                document.getElementById('notificacoes').innerHTML = doc.getElementById('notificacoes').innerHTML;
+            });
+        }, 30000);
+    </script>
+{% endblock %}

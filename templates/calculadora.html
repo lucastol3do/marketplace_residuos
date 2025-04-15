@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Calculadora de Impacto Ambiental</h2>
+    <p>Estime o CO2 economizado ao reciclar resíduos industriais.</p>
+    <form method="POST" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label for="tipo_residuo" class="form-label">Tipo de Resíduo</label>
+                <select class="form-select" id="tipo_residuo" name="tipo_residuo" required>
+                    {% for tipo in tipos_residuos %}
+                        <option value="{{ tipo }}" {% if tipo == tipo_residuo %}selected{% endif %}>{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="quantidade" class="form-label">Quantidade (Toneladas)</label>
+                <input type="number" class="form-control" id="quantidade" name="quantidade" step="0.01" min="0.01" value="{{ quantidade if quantidade is not none else '' }}" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Calcular</button>
+    </form>
+
+    {% if co2_economizado is not none and co2_economizado is defined %}
+        <div class="alert alert-success mt-4">
+            <h4>Resultado</h4>
+            <p>Reciclando <strong>{{ quantidade }}</strong> toneladas de <strong>{{ tipo_residuo }}</strong>, você economiza aproximadamente <strong>{{ co2_economizado | round(2) }} toneladas de CO2e</strong>.</p>
+        </div>
+    {% endif %}
+{% endblock %}

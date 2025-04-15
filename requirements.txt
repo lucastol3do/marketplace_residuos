@@ -1,0 +1,7 @@
+Flask==3.0.3
+Flask-Session==0.8.0
+Flask-RESTful==0.3.10
+pandas==2.2.3
+geopy==2.4.1
+requests==2.32.3
+reportlab==4.2.2

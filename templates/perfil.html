@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Perfil da Empresa</h2>
+    <form method="POST">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome</label>
+            <input type="text" class="form-control" id="nome" value="{{ empresa['nome'] }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="tipo" class="form-label">Tipo</label>
+            <input type="text" class="form-control" id="tipo" value="{{ empresa['tipo'] | capitalize }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="localizacao" class="form-label">Localização</label>
+            <input type="text" class="form-control" id="localizacao" value="{{ empresa['localizacao'] }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" value="{{ empresa['email'] }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="descricao" class="form-label">Descrição</label>
+            <textarea class="form-control" id="descricao" name="descricao" rows="4">{{ empresa['descricao'] or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="residuos_preferidos" class="form-label">Resíduos Preferidos (separados por vírgula)</label>
+            <input type="text" class="form-control" id="residuos_preferidos" name="residuos_preferidos" value="{{ empresa['residuos_preferidos'] or '' }}" placeholder="Ex.: Plástico, Metal">
+        </div>
+        <div class="mb-3">
+            <label for="contato" class="form-label">Contato</label>
+            <input type="text" class="form-control" id="contato" name="contato" value="{{ empresa['contato'] or '' }}" placeholder="Ex.: (11) 99999-9999">
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+    </form>
+
+    <!-- Conquistas -->
+    <h3 class="mt-4">Suas Conquistas</h3>
+    {% if conquistas %}
+        <div class="row">
+            {% for conquista in conquistas %}
+                <div class="col-md-4 mb-3">
+                    <div class="alert alert-success">
+                        <strong>{{ conquista['nome'] }}</strong>: {{ conquista['descricao'] }} <br>
+                        <small>Obtida em: {{ conquista['data'] }}</small>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Você ainda não tem conquistas. Continue contribuindo para a economia circular!</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Transações</h2>
+    
+    <h3>Registrar Nova Transação</h3>
+    <form method="POST">
+        <div class="mb-3">
+            <label for="empresa_geradora" class="form-label">Empresa Geradora</label>
+            <select class="form-select" id="empresa_geradora" name="empresa_geradora" required onchange="filtrarResiduos()">
+                <option value="">Selecione</option>
+                {% for empresa in empresas_geradoras %}
+                    <option value="{{ empresa['id'] }}">{{ empresa['nome'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="residuo_id" class="form-label">Resíduo</label>
+            <select class="form-select" id="residuo_id" name="residuo_id" required>
+                <option value="">Selecione</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="quantidade" class="form-label">Quantidade (toneladas)</label>
+            <input type="number" step="0.01" class="form-control" id="quantidade" name="quantidade" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Registrar</button>
+    </form>
+
+    <h3 class="mt-4">Resíduos Disponíveis</h3>
+    <button class="btn btn-secondary mb-3" onclick="toggleHeatmap()">Alternar Heatmap</button>
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+
+    <h3>Transações Registradas</h3>
+    {% if transacoes %}
+        <table class="table mt-4">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Empresa Geradora</th>
+                    <th>Tipo</th>
+                    <th>Quantidade</th>
+                    <th>CO2 Economizado</th>
+                    <th>Data</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transacoes %}
+                    <tr>
+                        <td>{{ t['id'] }}</td>
+                        <td>{{ t['empresa_geradora_nome'] }}</td>
+                        <td>{{ t['tipo_residuo'] }}</td>
+                        <td>{{ t['quantidade'] }}</td>
+                        <td>{{ t['co2_economizado'] | round(2) }} t CO2e</td>
+                        <td>{{ t['data_transacao'] }}</td>
+                        <td><a href="{{ url_for('certificado', transacao_id=t['id']) }}" class="btn btn-sm btn-success">Certificado</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nenhuma transação registrada.</p>
+    {% endif %}
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script>
+        var map = L.map('map').setView([-23.5505, -46.6333], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var markers = L.markerClusterGroup();
+        var heatLayer = L.heatLayer([], { radius: 25 }).addTo(map);
+        var showHeatmap = false;
+        var residuos = {{ residuos_com_coordenadas | tojson }};
+        var bounds = [];
+
+        residuos.forEach(function(r) {
+            if (r.lat && r.lon) {
+                var marker = L.marker([r.lat, r.lon]);
+                marker.bindPopup(
+                    `<b>${r.tipo_residuo}</b><br>` +
+                    `Empresa: ${r.empresa_nome}<br>` +
+                    `Quantidade: ${r.quantidade} ${r.unidade}<br>` +
+                    `Localização: ${r.localizacao}<br>` +
+                    `Registrado em: ${r.data_registro}`
+                );
+                markers.addLayer(marker);
+                heatLayer.addLatLng([r.lat, r.lon, r.quantidade / 100]);
+                bounds.push([r.lat, r.lon]);
+            }
+        });
+
+        map.addLayer(markers);
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        function toggleHeatmap() {
+            showHeatmap = !showHeatmap;
+            if (showHeatmap) {
+                map.removeLayer(markers);
+                map.addLayer(heatLayer);
+            } else {
+                map.removeLayer(heatLayer);
+                map.addLayer(markers);
+            }
+        }
+
+        var todosResiduos = {{ residuos | tojson }};
+        function filtrarResiduos() {
+            var empresaId = document.getElementById('empresa"isabled
+            document.getElementById('residuo_id').innerHTML = '<option value="">Selecione</option>';
+            if (empresaId) {
+                var residuosFiltrados = todosResiduos.filter(r => r.empresa_id == empresaId);
+                residuosFiltrados.forEach(r => {
+                    var option = document.createElement('option');
+                    option.value = r.id;
+                    option.text = `${r.tipo_residuo} - ${r.quantidade} ${r.unidade} (${r.localizacao})`;
+                    document.getElementById('residuo_id').appendChild(option);
+                });
+            }
+        }
+    </script>
+{% endblock %}

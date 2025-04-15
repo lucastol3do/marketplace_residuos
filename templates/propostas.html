@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Propostas</h2>
+    
+    {% if session['empresa_tipo'] == 'recicladora' %}
+        <h3>Enviar Nova Proposta</h3>
+        <p>Use a página de busca de resíduos para enviar propostas.</p>
+    {% endif %}
+    
+    <h3>Propostas Recebidas/Enviadas</h3>
+    {% if propostas %}
+        <table class="table mt-4">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo de Resíduo</th>
+                    <th>Quantidade</th>
+                    <th>Geradora</th>
+                    <th>Mensagem</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    {% if session['empresa_tipo'] == 'geradora' %}
+                        <th>Ações</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in propostas %}
+                    <tr>
+                        <td>{{ p['id'] }}</td>
+                        <td>{{ p['tipo_residuo'] }}</td>
+                        <td>{{ p['quantidade'] }}</td>
+                        <td>{{ p['geradora_nome'] }}</td>
+                        <td>{{ p['mensagem'] or 'N/A' }}</td>
+                        <td>{{ p['status'] | capitalize }}</td>
+                        <td>{{ p['data'] }}</td>
+                        {% if session['empresa_tipo'] == 'geradora' and p['status'] == 'pendente' %}
+                            <td>
+                                <form action="{{ url_for('aceitar_proposta', id=p['id']) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-success">Aceitar</button>
+                                </form>
+                                <form action="{{ url_for('rejeitar_proposta', id=p['id']) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger">Rejeitar</button>
+                                </form>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nenhuma proposta encontrada.</p>
+    {% endif %}
+{% endblock %}
